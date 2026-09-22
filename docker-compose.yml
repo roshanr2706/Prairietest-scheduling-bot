@@ -8,6 +8,7 @@ services:
       - CWL_USERNAME=${CWL_USERNAME}
       - CWL_PASSWORD=${CWL_PASSWORD}
       - SESSION_SECRET=${SESSION_SECRET}
+      - SECURE_COOKIES=${SECURE_COOKIES:-0}
     volumes:
       - ./data:/app/data          # read-write: SQLite state + storageState.json + debug
     restart: unless-stopped

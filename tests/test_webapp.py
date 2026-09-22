@@ -85,6 +85,23 @@ def test_events_api(client):
     data = c.get("/api/events").json()
     assert any(e["message"] == "hello world" for e in data["events"])
 
+def test_secure_cookies_toggle(tmp_path, monkeypatch):
+    monkeypatch.setenv("CWL_USERNAME", "alice")
+    monkeypatch.setenv("CWL_PASSWORD", "pw")
+    monkeypatch.setenv("SESSION_SECRET", "s")
+    monkeypatch.setenv("DISABLE_ENGINE", "1")
+    monkeypatch.setenv("SECURE_COOKIES", "1")
+    app = create_app(db=Database(str(tmp_path / "s.db")))
+    c = TestClient(app)
+    r = c.post("/login", data={"username": "alice", "password": "pw"}, follow_redirects=False)
+    assert "secure" in r.headers.get("set-cookie", "").lower()
+
+def test_default_cookie_not_secure(client):
+    # Default (no SECURE_COOKIES) keeps the cookie usable over plain HTTP.
+    c, _ = client
+    r = c.post("/login", data={"username": "alice", "password": "pw"}, follow_redirects=False)
+    assert "secure" not in r.headers.get("set-cookie", "").lower()
+
 def test_scan_now_sets_flag(client):
     c, db = client
     login(c)
