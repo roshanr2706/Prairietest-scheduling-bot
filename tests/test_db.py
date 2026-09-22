@@ -62,3 +62,31 @@ def test_to_target_exam_maps_to_dataclasses(tmp_path):
     assert r.time_start == time(15, 0) and r.time_end == time(17, 0)
     assert r.date_start == date(2026, 10, 1) and r.date_end == date(2026, 10, 3)
     assert r.weekdays == {"Fri"}
+
+def test_bookings_dedupe(tmp_path):
+    db = make(tmp_path)
+    assert db.already_booked(1, "87130") is False
+    db.record_booking(1, "87130", "CPSC 313 Quiz 1", "HENN 203",
+                      "2026-10-02T13:00:00-07:00", "alice", dry_run=False)
+    assert db.already_booked(1, "87130") is True
+    assert db.already_booked(1, "999") is False
+    assert len(db.recent_bookings()) == 1
+
+def test_dry_run_booking_not_counted_as_booked(tmp_path):
+    db = make(tmp_path)
+    db.record_booking(1, "87130", "x", "r", "s", "alice", dry_run=True)
+    assert db.already_booked(1, "87130") is False  # dry-run doesn't block real booking
+
+def test_events_trim(tmp_path):
+    db = make(tmp_path)
+    for i in range(520):
+        db.add_event("info", f"e{i}")
+    ev = db.recent_events(1000)
+    assert len(ev) == 500
+    assert ev[0]["message"] == "e519"  # newest first
+
+def test_kv(tmp_path):
+    db = make(tmp_path)
+    assert db.get_kv("session_state", "not_connected") == "not_connected"
+    db.set_kv("session_state", "connected")
+    assert db.get_kv("session_state") == "connected"

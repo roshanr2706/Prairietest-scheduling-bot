@@ -137,3 +137,63 @@ class Database:
             match=_compile_regex(row["match"]), exam_id=None,
             min_seats=row["min_seats"], tiebreak=row["tiebreak"], preferences=prefs,
         )
+
+    # ---- bookings ----
+    def already_booked(self, target_id: int, exam_id: str) -> bool:
+        con = self._connect()
+        row = con.execute(
+            "SELECT 1 FROM bookings WHERE target_id=? AND exam_id=? AND dry_run=0 LIMIT 1",
+            (target_id, str(exam_id)),
+        ).fetchone()
+        con.close()
+        return row is not None
+
+    def record_booking(self, target_id, exam_id, exam_name, room, slot_start, cwl, dry_run) -> None:
+        con = self._connect()
+        con.execute(
+            "INSERT INTO bookings(target_id, exam_id, exam_name, room, slot_start, cwl, dry_run) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (target_id, str(exam_id), exam_name, room, slot_start, cwl, int(bool(dry_run))),
+        )
+        con.commit()
+        con.close()
+
+    def recent_bookings(self, n: int = 20) -> list[sqlite3.Row]:
+        con = self._connect()
+        rows = con.execute("SELECT * FROM bookings ORDER BY id DESC LIMIT ?", (n,)).fetchall()
+        con.close()
+        return rows
+
+    # ---- events ----
+    def add_event(self, level: str, message: str) -> None:
+        con = self._connect()
+        con.execute("INSERT INTO events(level, message) VALUES (?,?)", (level, message))
+        con.execute(
+            "DELETE FROM events WHERE id NOT IN "
+            "(SELECT id FROM events ORDER BY id DESC LIMIT 500)"
+        )
+        con.commit()
+        con.close()
+
+    def recent_events(self, n: int = 100) -> list[sqlite3.Row]:
+        con = self._connect()
+        rows = con.execute("SELECT * FROM events ORDER BY id DESC LIMIT ?", (n,)).fetchall()
+        con.close()
+        return rows
+
+    # ---- kv ----
+    def get_kv(self, key: str, default=None):
+        con = self._connect()
+        row = con.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
+        con.close()
+        return row["value"] if row else default
+
+    def set_kv(self, key: str, value) -> None:
+        con = self._connect()
+        con.execute(
+            "INSERT INTO kv(key, value) VALUES (?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, str(value)),
+        )
+        con.commit()
+        con.close()
