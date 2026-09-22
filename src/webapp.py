@@ -173,6 +173,23 @@ def create_app(db: Database | None = None) -> FastAPI:
         rows = app.state.db.recent_events(100)
         return {"events": [dict(r) for r in rows]}
 
+    @app.on_event("startup")
+    async def _start_engine():
+        import asyncio
+        if os.environ.get("DISABLE_ENGINE") == "1":
+            return
+        from src.notifier import Notifier
+        from src.engine import run_engine
+        notifier = Notifier(os.environ.get("WEBHOOK_URL"))
+        storage = os.environ.get("STORAGE_STATE", "data/storageState.json")
+        app.state._engine_task = asyncio.create_task(run_engine(app.state.db, notifier, storage))
+
+    @app.on_event("shutdown")
+    async def _stop_engine():
+        task = getattr(app.state, "_engine_task", None)
+        if task:
+            task.cancel()
+
     return app
 
 app = create_app()
