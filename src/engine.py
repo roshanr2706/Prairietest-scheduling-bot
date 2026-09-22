@@ -71,6 +71,19 @@ def _poll_delay(db) -> float:
     jitter = float(db.get_kv("poll_jitter", "15"))
     return interval + random.uniform(0, jitter)
 
+async def _wait_for_next_cycle(db, step: float = 2.0) -> None:
+    """Sleep until the next poll, returning early if a manual scan was requested
+    (the dashboard's "Scan now" sets kv scan_now=1)."""
+    total = _poll_delay(db)
+    waited = 0.0
+    while waited < total:
+        if db.get_kv("scan_now", "0") == "1":
+            db.set_kv("scan_now", "0")
+            db.add_event("info", "manual scan requested")
+            return
+        await asyncio.sleep(step)
+        waited += step
+
 async def _discover_and_pages(page, targets):
     """Return (discovered per target, html per exam_id) for one cycle."""
     await page.goto(HOME, wait_until="domcontentloaded")
@@ -146,7 +159,7 @@ async def run_engine(db, notifier: Notifier, storage_state_path: str, stop_event
                 enabled = db.list_targets(enabled_only=True)
                 targets = [(r["id"], db.to_target_exam(r["id"])) for r in enabled]
                 if not targets:
-                    await asyncio.sleep(_poll_delay(db))
+                    await _wait_for_next_cycle(db)
                     continue
                 discovered, pages, _ = await _discover_and_pages(page, targets)
                 if is_logged_out(await page.content(), page.url):
@@ -185,5 +198,5 @@ async def run_engine(db, notifier: Notifier, storage_state_path: str, stop_event
                 log.exception("engine tick error")
                 db.add_event("error", f"tick error: {e}; backoff {backoff}s")
                 await asyncio.sleep(backoff)
-            await asyncio.sleep(_poll_delay(db))
+            await _wait_for_next_cycle(db)
         await browser.close()
