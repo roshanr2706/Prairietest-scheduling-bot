@@ -48,3 +48,21 @@ def test_plan_multiple_exams_one_target():
                                already_booked=lambda t, e: False,
                                dry_run_by_target={10: True})
     assert {d.exam_id for d in decisions} == {"87130", "87131"}
+
+from datetime import datetime
+from src.models import Session, RESERVABLE
+from src.engine import booking_message, auth_config_from_env
+
+def test_booking_message_format():
+    s = Session(status=RESERVABLE, start=datetime(2026,10,2,13,0), center="ORCA",
+                room="💥HENN 203", room_clean="HENN 203", attributes="", available=4,
+                capacity=14, reserve_button_name="Reserve this session on X in ORCA: HENN 203")
+    msg = booking_message("alice", "CPSC 313 Quiz 1", s)
+    assert msg == "alice has had CPSC 313 Quiz 1 booked at 2026-10-02 13:00 in HENN 203"
+
+def test_auth_config_from_env(monkeypatch):
+    monkeypatch.setenv("CWL_USERNAME", "bob")
+    monkeypatch.setenv("CWL_PASSWORD", "pw")
+    monkeypatch.setenv("DUO_WAIT_SECONDS", "90")
+    cfg = auth_config_from_env()
+    assert cfg.username == "bob" and cfg.password == "pw" and cfg.duo_wait_seconds == 90
