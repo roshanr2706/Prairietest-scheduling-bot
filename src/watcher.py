@@ -20,6 +20,21 @@ def discover_exam_id(home_html: str, match: re.Pattern) -> str | None:
             return _EXAM_HREF.search(a["href"]).group(1)
     return None
 
+def matching_exams(home_html: str, pattern) -> list[tuple[str, str]]:
+    soup = BeautifulSoup(home_html, "lxml")
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for a in soup.find_all("a", href=_EXAM_HREF):
+        text = a.get_text(" ", strip=True)
+        if not pattern.search(text):
+            continue
+        exam_id = _EXAM_HREF.search(a["href"]).group(1)
+        if exam_id in seen:
+            continue
+        seen.add(exam_id)
+        out.append((exam_id, text))
+    return out
+
 def is_logged_out(html: str, url: str) -> bool:
     u = (url or "").lower()
     if any(m in u for m in _LOGOUT_URL_MARKERS):
