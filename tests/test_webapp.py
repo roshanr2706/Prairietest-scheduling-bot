@@ -85,6 +85,13 @@ def test_events_api(client):
     data = c.get("/api/events").json()
     assert any(e["message"] == "hello world" for e in data["events"])
 
+def test_scan_now_sets_flag(client):
+    c, db = client
+    login(c)
+    assert db.get_kv("scan_now", "0") == "0"
+    c.post("/scan")
+    assert db.get_kv("scan_now") == "1"
+
 def test_connect_sets_connecting(client):
     # Connect must flip state to 'connecting' — that is what the engine picks up
     # to perform the login + Duo push (see engine.next_login_action).

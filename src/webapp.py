@@ -143,6 +143,14 @@ def create_app(db: Database | None = None) -> FastAPI:
         app.state.db.set_kv("watch_running", "1" if action == "start" else "0")
         return RedirectResponse("/", status_code=303)
 
+    @app.post("/scan")
+    def scan_now(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        # The engine's between-cycle wait polls this flag and runs a cycle early.
+        app.state.db.set_kv("scan_now", "1")
+        return RedirectResponse("/", status_code=303)
+
     @app.post("/connect")
     def connect(request: Request):
         if not require_user(request):

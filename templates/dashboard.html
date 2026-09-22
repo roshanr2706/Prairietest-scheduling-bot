@@ -31,6 +31,12 @@
         <i class="bi {{ 'bi-pause-fill' if watch_running else 'bi-play-fill' }} me-1"></i>{{ "Pause" if watch_running else "Start" }} watching
       </button>
     </form>
+    <form method="post" action="/scan">
+      <button class="btn btn-outline-primary" {{ 'disabled' if session_state != 'connected' else '' }}
+              title="Run a poll cycle right now instead of waiting for the interval">
+        <i class="bi bi-arrow-repeat me-1"></i>Scan now
+      </button>
+    </form>
   </div>
 </div>
 
