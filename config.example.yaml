@@ -1,0 +1,30 @@
+target_exams:
+  - match: "CPSC 313 Quiz 1"
+    exam_id: null
+    min_seats: 1
+    tiebreak: earliest        # earliest | latest | most_seats
+    preferences:
+      - name: "ideal: ICCS afternoon"
+        location: "ICCS"
+        time_range: "15:00-17:00"
+        date_range: "2026-10-01..2026-10-03"
+      - name: "any ICCS 014/018"
+        location: "ICCS 01[48]"
+      - name: "HENN mornings"
+        location: "HENN"
+        time_range: "09:00-12:00"
+      - name: "last resort: anything"
+        location: ".*"
+poll:
+  interval_seconds: 15
+  jitter_seconds: 5
+  open_time: null
+  ramp_interval_seconds: 2
+notify:
+  webhook_url: ${WEBHOOK_URL}
+auth:
+  username: ${CWL_USERNAME}     # headless CWL auto-login (creds via env)
+  password: ${CWL_PASSWORD}
+  duo_wait_seconds: 120         # how long to wait for you to approve the Duo push
+  trust_device: true            # tick "trust this browser 30 days" so restarts skip Duo
+dry_run: true

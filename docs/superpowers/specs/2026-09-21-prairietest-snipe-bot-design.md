@@ -184,14 +184,34 @@ dry_run: true                        # detect + rank + log, but DON'T click fina
 - **`tiebreak`** — when the winning rule matches several open slots, which to
   grab: `earliest` (default), `latest`, or `most_seats`.
 
-## 5. Login / Duo
+## 5. Login / Duo (headless auto-login)
 
-- The bot **reuses a saved session** and never handles credentials or Duo.
-- `seed_session.py` produces `storageState.json` via a one-time interactive
-  login with Duo "remember this device 30 days".
-- When the session expires, `session_guard` detects it, notifies
-  `session_invalid`, and stops booking attempts. The user re-runs the seeder
-  and drops in a fresh `storageState.json`.
+Designed for an unattended headless Linux box: no interactive browser step.
+
+- **Credentials from env:** `CWL_USERNAME`, `CWL_PASSWORD`. The bot fills and
+  submits the CWL login form at runtime. Claude never types these itself; the
+  bot reads them on its own box.
+- **Duo = push approve-once:** on first launch (or when device trust has
+  expired) the bot ticks "trust this browser for 30 days", triggers a Duo push,
+  and webhooks the user `duo_approve` ("approve the push on your phone now"),
+  then waits up to `auth.duo_wait_seconds` for the login to complete.
+- **Session persistence:** after a successful login the bot writes
+  `data/storageState.json` (cookies + the Duo device-trust cookie) to the
+  **read-write** data volume. Subsequent restarts reuse it and skip Duo for
+  ~30 days.
+- **Mid-run expiry:** `session_guard` detecting a logged-out state triggers an
+  automatic re-login (device trust usually skips Duo; if expired, another push
+  + `duo_approve` notification).
+- **Selectors:** CWL and the Duo Universal Prompt DOM are not observed at build
+  time (would require logging the user out). `src/auth.py` keeps all selectors
+  in clearly-marked constants, dumps a screenshot + HTML to `data/debug/` on
+  failure, and is validated/tuned on the first real login.
+- **Optional manual seeder:** `seed_session.py` remains for seeding on a machine
+  that has a display (produces the same `storageState.json`); it is not required
+  for headless operation.
+- **Security:** `CWL_PASSWORD` lives only in the environment / an uncommitted
+  `.env` (git-ignored). Operating a credentialed bot is the user's
+  responsibility under PrairieTest/UBC/Duo terms.
 
 ## 6. Error handling
 

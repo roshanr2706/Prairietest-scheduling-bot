@@ -1,0 +1,11 @@
+services:
+  snipe:
+    build: .
+    environment:
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - CWL_USERNAME=${CWL_USERNAME}
+      - CWL_PASSWORD=${CWL_PASSWORD}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data          # read-write: the bot saves storageState.json here
+    restart: unless-stopped
