@@ -20,7 +20,14 @@ def check_cwl(username: str, password: str) -> bool:
 def create_app(db: Database | None = None) -> FastAPI:
     app = FastAPI()
     app.state.db = db or Database(os.environ.get("STATE_DB", "data/state.db"))
-    app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", os.urandom(16).hex()))
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=os.environ.get("SESSION_SECRET", os.urandom(16).hex()),
+        same_site="lax",
+        # Set SECURE_COOKIES=1 when served over HTTPS (e.g. behind Nginx Proxy
+        # Manager) so the session cookie is only sent over TLS.
+        https_only=os.environ.get("SECURE_COOKIES") == "1",
+    )
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
     def require_user(request: Request):
