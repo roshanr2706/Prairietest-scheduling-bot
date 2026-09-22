@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sqlite3
+from pathlib import Path
 from src.config import (
     TargetExam, PreferenceRule, _compile_regex, _parse_time_range, _parse_date_range,
 )
@@ -37,6 +38,9 @@ CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 class Database:
     def __init__(self, path: str):
         self.path = path
+        parent = Path(path).parent
+        if str(parent) not in ("", "."):
+            parent.mkdir(parents=True, exist_ok=True)
         con = self._connect()
         con.executescript(_SCHEMA)
         con.commit()
