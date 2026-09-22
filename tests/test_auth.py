@@ -61,3 +61,34 @@ def test_fill_first_returns_false_when_none_match():
     page = FakePage(hit_selector="#nope")
     ok = asyncio.run(A._fill_first(page, A.PASSWORD_SELECTORS, "x"))
     assert ok is False
+
+def test_is_logged_in():
+    assert A.is_logged_in("https://us.prairietest.com/pt",
+                          "PrairieTest Homepage Exams available for reservations") is True
+    assert A.is_logged_in("https://us.prairietest.com/pt/student/exam/1",
+                          "Exam information Choose a new session") is True
+    assert A.is_logged_in("https://us.prairietest.com/pt",
+                          "An exam proctoring system Login") is False
+    assert A.is_logged_in("https://authentication.ubc.ca", "CWL Authentication") is False
+
+def test_login_step_full_chain():
+    # logged in -> done
+    assert A.login_step("https://us.prairietest.com/pt",
+                        "Exams available for reservations") == "done"
+    # PrairieTest landing splash -> click Login
+    assert A.login_step("https://us.prairietest.com/pt",
+                        "PrairieTest An exam proctoring system Login") == "click_login"
+    # PrairieLearn institution chooser -> choose UBC
+    assert A.login_step("https://us.prairielearn.com/pl/login",
+                        "Sign in to continue to PrairieTest Search for your institution") == "choose_institution"
+    # UBC CWL form -> fill credentials
+    assert A.login_step("https://authentication.ubc.ca/idp",
+                        "CWL Authentication Login Name Password") == "fill_cwl"
+    # Duo push screen -> wait for phone approval
+    assert A.login_step("https://api-x.duosecurity.com/frame",
+                        "Check for a Duo Push") == "duo_wait"
+    # Duo trust screen -> click trust
+    assert A.login_step("https://api-x.duosecurity.com/frame",
+                        "Is this your device?") == "duo_trust"
+    # unknown -> wait
+    assert A.login_step("https://example.com", "hmm") == "wait"

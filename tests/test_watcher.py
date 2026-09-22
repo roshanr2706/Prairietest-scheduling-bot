@@ -26,6 +26,19 @@ def test_is_logged_out_by_marker():
 def test_is_logged_in():
     assert W.is_logged_out("<main>Exam reservation</main>", "https://us.prairietest.com/pt/student/exam/87130") is False
 
+def test_is_logged_out_on_prairietest_landing_splash():
+    # Logged-out PrairieTest shows a marketing splash + Login button, NOT a redirect.
+    html = "<h1>PrairieTest</h1><p>An exam proctoring system</p><a>Login</a>"
+    assert W.is_logged_out(html, "https://us.prairietest.com/pt") is True
+
+def test_is_logged_in_home_not_logged_out():
+    html = "<main>PrairieTest Homepage Exams available for reservations Exam reservations</main>"
+    assert W.is_logged_out(html, "https://us.prairietest.com/pt") is False
+
+def test_is_logged_out_on_auth_intermediates():
+    assert W.is_logged_out("<html></html>", "https://us.prairielearn.com/pl/login") is True
+    assert W.is_logged_out("<html></html>", "https://api-x.duosecurity.com/frame") is True
+
 def test_next_interval_base():
     poll = PollConfig(interval_seconds=15, jitter_seconds=0, open_time=None, ramp_interval_seconds=2)
     assert W.next_interval(datetime(2026,10,1,8,0,0), poll) == 15
