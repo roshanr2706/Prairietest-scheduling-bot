@@ -70,4 +70,27 @@ For non-bookable sessions the action column shows a status label instead of a
 Raw HTML with tokens is blocked, so create a **sanitized** fixture during
 implementation: reconstruct a small `sessions_fixture.html` from the structure
 above with a handful of rows covering all four statuses (and emoji rooms), with
-dummy hidden-field values. Parser tests run against that.
+dummy hidden-field values. Parser tests run against that. **Done** —
+`tests/fixtures/sessions_fixture.html`.
+
+## Live validation (2026-09-21, exam 87130)
+
+Parser selectors validated against all 90 live rows (read-only, no tokens read):
+- 90/90 rows have `<time datetime=…>`; 90/90 have a room link; 90/90 have
+  `Available: X / Y`.
+- Status counts: 61 `No available seats`, 17 `Reserve this session`,
+  11 `Time limit doesn't fit`, 1 `Not reservable for this exam`; 0 unrecognized.
+- `Time limit doesn't fit` uses a plain ASCII apostrophe (matches parser).
+- `datetime` attribute format is `2026-09-29T10:00:00.000-07:00` — full ISO
+  **with year**, milliseconds, and offset; `datetime.fromisoformat` parses it.
+- Non-reservable rows add `text-muted` to the `div.row` and place the status
+  text directly in the first column div.
+- Reserve `aria-label` confirmed exactly:
+  `Reserve this session on Tue, Sep 29, 11am (PDT) in ORCA: 💥HENN 203`.
+
+Still deferred to a real dry-run (needs a seeded login / a real reserve click):
+- Whether clicking `Reserve this session` shows a confirmation step
+  (tune `_CONFIRM_NAMES` in `src/booker.py` if so).
+- Exact logged-out DOM/URL markers (tune `is_logged_out` in `src/watcher.py`).
+- How a brand-new (never-reserved) exam renders under "Exams available for
+  reservations" for the discovery path.
