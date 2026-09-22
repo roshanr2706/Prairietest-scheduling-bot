@@ -50,6 +50,19 @@ def test_missing_env_leaves_placeholder_as_none(tmp_path, monkeypatch):
     cfg = load_config(write(tmp_path, BASE))
     assert cfg.notify.webhook_url is None
 
+def test_auth_defaults_when_absent(tmp_path):
+    cfg = load_config(write(tmp_path, BASE))
+    assert cfg.auth.username is None and cfg.auth.password is None
+    assert cfg.auth.duo_wait_seconds == 120 and cfg.auth.trust_device is True
+
+def test_auth_reads_env_and_overrides(tmp_path, monkeypatch):
+    monkeypatch.setenv("CWL_USERNAME", "alice")
+    monkeypatch.setenv("CWL_PASSWORD", "s3cret")
+    text = BASE + '\nauth:\n  username: ${CWL_USERNAME}\n  password: ${CWL_PASSWORD}\n  duo_wait_seconds: 90\n  trust_device: false\n'
+    cfg = load_config(write(tmp_path, text))
+    assert cfg.auth.username == "alice" and cfg.auth.password == "s3cret"
+    assert cfg.auth.duo_wait_seconds == 90 and cfg.auth.trust_device is False
+
 def test_bad_regex_raises(tmp_path):
     bad = BASE.replace('location: ".*"', 'location: "ICCS[01"')
     with pytest.raises(ConfigError):

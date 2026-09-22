@@ -42,9 +42,42 @@ from playwright.async_api import async_playwright
 from src.parser import parse_sessions
 from src.ranker import choose_session
 from src.booker import book, BOOKED, DRY_RUN, TAKEN
+from src.auth import auto_login, session_exists, AuthError
 
 log = logging.getLogger(__name__)
 HOME = f"{BASE}/pt"
+
+async def _new_logged_in(browser, config, notifier, storage_path: str):
+    """Return (context, page) that is logged in, reusing a saved session or
+    performing an auto-login (which is then persisted to storage_path)."""
+    if session_exists(storage_path):
+        context = await browser.new_context(storage_state=storage_path)
+        page = await context.new_page()
+        await page.goto(HOME, wait_until="domcontentloaded")
+        if not is_logged_out(await page.content(), page.url):
+            return context, page
+        # Session cookies stale, but the Duo device-trust cookie in this context
+        # may still let us skip Duo — reuse it for the login attempt.
+    else:
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(HOME, wait_until="domcontentloaded")
+
+    if not await auto_login(page, config.auth, notifier):
+        raise AuthError("auto-login failed")
+    await context.storage_state(path=storage_path)
+    notifier.send("logged_in", "session established and saved")
+    return context, page
+
+async def _relogin(page, context, config, notifier, storage_path: str) -> bool:
+    await page.goto(HOME, wait_until="domcontentloaded")
+    if not is_logged_out(await page.content(), page.url):
+        return True
+    if not await auto_login(page, config.auth, notifier):
+        return False
+    await context.storage_state(path=storage_path)
+    notifier.send("logged_in", "re-established session")
+    return True
 
 async def _resolve_exam_id(page, exam):
     if exam.exam_id:
@@ -56,8 +89,7 @@ async def run_watch(config, notifier, storage_state_path: str):
     notifier.send("started", f"watching {len(config.target_exams)} exam(s), dry_run={config.dry_run}")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(storage_state=storage_state_path)
-        page = await context.new_page()
+        context, page = await _new_logged_in(browser, config, notifier, storage_state_path)
         remaining = list(config.target_exams)
         backoff = 0
         while remaining:
@@ -69,8 +101,10 @@ async def run_watch(config, notifier, storage_state_path: str):
                     await page.goto(exam_url(exam_id), wait_until="domcontentloaded")
                     html, url = await page.content(), page.url
                     if is_logged_out(html, url):
-                        notifier.send("session_invalid", "logged out; re-seed storageState.json")
-                        await asyncio.sleep(60)
+                        notifier.send("session_invalid", "logged out; attempting re-login")
+                        if not await _relogin(page, context, config, notifier, storage_state_path):
+                            notifier.send("auth_failed", "re-login failed; backing off 60s")
+                            await asyncio.sleep(60)
                         continue
                     sessions = parse_sessions(html)
                     chosen = choose_session(sessions, exam.preferences, exam.tiebreak, exam.min_seats)

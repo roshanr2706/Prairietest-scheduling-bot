@@ -1406,6 +1406,38 @@ git commit -m "chore: tune selectors from live dry-run validation"
 
 ---
 
+## Task 11: Headless CWL + Duo auto-login (added after review)
+
+**Rationale:** deployment target is a headless Linux box, so the interactive
+seeder is insufficient. Credentials come from env; Duo is "push approve-once"
+(see spec §5). Implemented with TDD for pure helpers; the Playwright login flow
+is validated on first real run.
+
+**Files:** `src/auth.py`, `tests/test_auth.py`; modified `src/config.py`
+(+`AuthConfig`, `auth` section), `src/watcher.py` (`_new_logged_in`, `_relogin`,
+login in `run_watch`), `config.example.yaml`, `.env.example`,
+`docker-compose.yml` (data volume rw + `CWL_USERNAME`/`CWL_PASSWORD`), `README.md`.
+
+**Interfaces produced:**
+- `AuthConfig(username, password, duo_wait_seconds, trust_device)`.
+- `auth.credentials(auth_config) -> (str, str)` (raises `AuthError` if unset).
+- `auth.session_exists(path) -> bool`; `auth.is_login_page(url) -> bool`.
+- `async auth.auto_login(page, auth_config, notifier, debug_dir) -> bool` — fills
+  CWL creds, ticks trust, triggers Duo push, sends `duo_approve`, waits for
+  return to PrairieTest; dumps screenshot+HTML to `data/debug/` on failure.
+- `watcher._new_logged_in(...)` / `watcher._relogin(...)` establish/refresh the
+  session and persist `storageState.json`.
+
+**Done/verified:** `pytest -v` → 43 passed. Selector constants in `src/auth.py`
+are tuned on the first live login (like Task 10).
+
+- [x] Config `AuthConfig` + `auth` section + tests
+- [x] `src/auth.py` + `tests/test_auth.py` (credentials, session_exists, is_login_page, _fill_first ordering)
+- [x] Watcher integration (`_new_logged_in`, `_relogin`, `run_watch`)
+- [x] Deployment files (compose rw + creds env, README, examples)
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage:** seeder (§3.1.1 / Task 8), config incl. ranges+regex (§4 / Task 3), watcher+discovery+guard+ramp (§3.1.3/§6 / Tasks 6, 8), parser (§2 / Task 2), ranker (§3.1.5 / Task 4), booker with dry-run + delete-exclusion (§3.1.6 / Task 7), notifier events (§3.1.7 / Task 5), Docker/compose (§3.2 / Task 9), tests incl. fixture (§7 / Tasks 1-8), safety (§8 / Global Constraints + Task 7), open items (§9 / Task 10). All covered.

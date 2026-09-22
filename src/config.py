@@ -40,10 +40,18 @@ class NotifyConfig:
     webhook_url: str | None
 
 @dataclass
+class AuthConfig:
+    username: str | None
+    password: str | None
+    duo_wait_seconds: int
+    trust_device: bool
+
+@dataclass
 class AppConfig:
     target_exams: list[TargetExam]
     poll: PollConfig
     notify: NotifyConfig
+    auth: AuthConfig
     dry_run: bool
 
 _ENV_RE = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
@@ -118,4 +126,12 @@ def load_config(path: str) -> AppConfig:
         ramp_interval_seconds=int(p.get("ramp_interval_seconds", 2)),
     )
     notify = NotifyConfig(webhook_url=_expand(raw.get("notify", {}).get("webhook_url")))
-    return AppConfig(exams, poll, notify, bool(raw.get("dry_run", True)))
+
+    a = raw.get("auth", {}) or {}
+    auth = AuthConfig(
+        username=_expand(a.get("username")),
+        password=_expand(a.get("password")),
+        duo_wait_seconds=int(a.get("duo_wait_seconds", 120)),
+        trust_device=bool(a.get("trust_device", True)),
+    )
+    return AppConfig(exams, poll, notify, auth, bool(raw.get("dry_run", True)))
