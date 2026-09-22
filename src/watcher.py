@@ -12,8 +12,9 @@ _LOGOUT_URL_MARKERS = ("authentication.ubc.ca", "/login", "cwl",
 _LOGOUT_HTML_MARKERS = ("Sign in with your CWL", "CWL Login", "Campus-Wide Login",
                         "An exam proctoring system")
 _LOGGED_IN_MARKERS = ("Exams available for reservations", "PrairieTest Homepage",
-                      "Exam reservations", "Exam information", "Choose a new session",
-                      "Delete this reservation")
+                      "Exam reservations", "Exam information", "Choose a session",
+                      "Choose a new session", "Delete this reservation",
+                      "scheduled to start")
 
 def exam_url(exam_id: str) -> str:
     return f"{BASE}/pt/student/exam/{exam_id}"

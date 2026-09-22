@@ -45,7 +45,8 @@ DUO_NOTRUST_SELECTORS = ["button:has-text('No, other people use this device')"]
 LOGIN_URL_MARKERS = ("authentication.ubc.ca", "/cas", "/login", "duosecurity.com", "duo.com", "sso")
 LOGGED_IN_MARKERS = (
     "Exams available for reservations", "PrairieTest Homepage", "Exam reservations",
-    "Exam information", "Choose a new session", "Delete this reservation",
+    "Exam information", "Choose a session", "Choose a new session",
+    "Delete this reservation", "scheduled to start",
 )
 
 class AuthError(Exception):
