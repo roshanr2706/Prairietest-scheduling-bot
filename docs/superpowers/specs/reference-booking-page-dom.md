@@ -88,9 +88,38 @@ Parser selectors validated against all 90 live rows (read-only, no tokens read):
 - Reserve `aria-label` confirmed exactly:
   `Reserve this session on Tue, Sep 29, 11am (PDT) in ORCA: 💥HENN 203`.
 
-Still deferred to a real dry-run (needs a seeded login / a real reserve click):
+Still deferred to a real dry-run (needs a real reserve click):
 - Whether clicking `Reserve this session` shows a confirmation step
   (tune `_CONFIRM_NAMES` in `src/booker.py` if so).
-- Exact logged-out DOM/URL markers (tune `is_logged_out` in `src/watcher.py`).
 - How a brand-new (never-reserved) exam renders under "Exams available for
   reservations" for the discovery path.
+
+## Login flow (observed live 2026-09-21, isolated browser)
+
+The full CWL + Duo chain, confirmed end to end:
+
+1. **PrairieTest landing** `us.prairietest.com/pt` (logged out): a marketing
+   splash — `PrairieTest`, text **"An exam proctoring system"**, and a **"Login"**
+   button. (Reliable logged-out marker: `An exam proctoring system`.)
+2. Click **Login** → **PrairieLearn SSO chooser** `us.prairielearn.com`:
+   "Sign in to continue to PrairieTest", a "Search for your institution" search
+   box, and institution links `a[href*="/saml/login"]`. Pick
+   **"University of British Columbia (ubc.ca)"** (match by text).
+3. → **UBC CWL** `authentication.ubc.ca`: `#username` (name `j_username`),
+   `#password` (name `j_password`), submit `button[type=submit]`
+   (name `_eventId_proceed`, text "Login"). **Only enter the password on this
+   host.**
+4. → **Duo Universal Prompt** `*.duosecurity.com`: the push is **auto-sent**
+   ("Check for a Duo Push" + spinner). There is **no "Send me a Push" button**
+   to click — just notify the user to approve on their phone. ("Other options"
+   button exists for fallbacks.)
+5. After approval → **"Is this your device?"**: buttons **"Yes, this is my
+   device"** and "No, other people use this device" (text-only, no id/name).
+   Clicking "Yes" sets the ~30-day device trust.
+6. Returns via SAML (may land on PrairieLearn first). Clicking PrairieTest
+   **Login** again then SSO-through's with **no Duo** (session + trust exist),
+   landing on the logged-in home: **"PrairieTest Homepage"**, **"Exams available
+   for reservations"**, **"Exam reservations"**.
+
+Implication: `auto_login` must drive the whole chain (landing → chooser → CWL →
+Duo → trust → possible second PrairieTest Login), not just the CWL form.

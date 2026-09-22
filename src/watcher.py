@@ -7,8 +7,13 @@ from src.config import PollConfig
 
 BASE = "https://us.prairietest.com"
 _EXAM_HREF = re.compile(r"/pt/student/exam/(\d+)")
-_LOGOUT_URL_MARKERS = ("authentication.ubc.ca", "/login", "cwl")
-_LOGOUT_HTML_MARKERS = ("Sign in with your CWL", "CWL Login", "Campus-Wide Login")
+_LOGOUT_URL_MARKERS = ("authentication.ubc.ca", "/login", "cwl",
+                       "duosecurity.com", "duo.com", "prairielearn.com")
+_LOGOUT_HTML_MARKERS = ("Sign in with your CWL", "CWL Login", "Campus-Wide Login",
+                        "An exam proctoring system")
+_LOGGED_IN_MARKERS = ("Exams available for reservations", "PrairieTest Homepage",
+                      "Exam reservations", "Exam information", "Choose a new session",
+                      "Delete this reservation")
 
 def exam_url(exam_id: str) -> str:
     return f"{BASE}/pt/student/exam/{exam_id}"
@@ -39,6 +44,8 @@ def is_logged_out(html: str, url: str) -> bool:
     u = (url or "").lower()
     if any(m in u for m in _LOGOUT_URL_MARKERS):
         return True
+    if any(m in html for m in _LOGGED_IN_MARKERS):
+        return False
     return any(m in html for m in _LOGOUT_HTML_MARKERS)
 
 def next_interval(now: datetime, poll: PollConfig) -> float:
