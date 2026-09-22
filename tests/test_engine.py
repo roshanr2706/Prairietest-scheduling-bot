@@ -66,3 +66,15 @@ def test_auth_config_from_env(monkeypatch):
     monkeypatch.setenv("DUO_WAIT_SECONDS", "90")
     cfg = auth_config_from_env()
     assert cfg.username == "bob" and cfg.password == "pw" and cfg.duo_wait_seconds == 90
+
+from src.engine import next_login_action
+
+def test_next_login_action():
+    # Connected -> proceed to watch cycle
+    assert next_login_action("connected") == "watch"
+    # User clicked Connect -> attempt login (this is what triggers Duo)
+    assert next_login_action("connecting") == "login"
+    # Not connected / failed / unknown -> wait for the user to click Connect
+    assert next_login_action("not_connected") == "wait"
+    assert next_login_action("auth_failed") == "wait"
+    assert next_login_action("anything_else") == "wait"
