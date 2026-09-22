@@ -88,11 +88,21 @@ Parser selectors validated against all 90 live rows (read-only, no tokens read):
 - Reserve `aria-label` confirmed exactly:
   `Reserve this session on Tue, Sep 29, 11am (PDT) in ORCA: 💥HENN 203`.
 
-Still deferred to a real dry-run (needs a real reserve click):
-- Whether clicking `Reserve this session` shows a confirmation step
-  (tune `_CONFIRM_NAMES` in `src/booker.py` if so).
-- How a brand-new (never-reserved) exam renders under "Exams available for
-  reservations" for the discovery path.
+### Reserve flow + discovery (confirmed live 2026-09-22, real booking)
+
+- **Discovery:** an unreserved exam appears on `/pt` under "Exams available for
+  reservations" as a link **"Make a reservation for CPSC 320 (2026W1): Test 1"**
+  → `/pt/student/exam/{id}`. The link text contains the exam name, so
+  `matching_exams` (which searches link text) catches it. ✓
+- **Fresh reserve page** `/pt/student/exam/{id}` is the same slot picker as the
+  change page ("Choose a session for …" instead of "Choose a **new** session"),
+  with the same `Reserve this session` rows and **no Delete button**.
+- **No confirmation step.** Clicking `Reserve this session on <date> in ORCA:
+  <room>` books **immediately** and navigates to the reservation page — there is
+  no confirm dialog. `_CONFIRM_NAMES` in `src/booker.py` is now purely defensive.
+- **Success page** shows: `Exam reservation`, `Your exam is scheduled to start
+  at <time> … in ORCA: <room>`, and a `Change or delete this reservation` link.
+  `booker.is_booking_confirmed()` verifies against these markers.
 
 ## Login flow (observed live 2026-09-21, isolated browser)
 
