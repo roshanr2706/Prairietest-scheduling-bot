@@ -1,30 +1,87 @@
-{% extends "base.html" %}{% block title %}Target{% endblock %}
+{% extends "base.html" %}{% block title %}{{ "Edit" if target else "New" }} target{% endblock %}
 {% block body %}
-<h1>{{ "Edit" if target else "New" }} target</h1>
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+  <li class="breadcrumb-item active">{{ "Edit target" if target else "New target" }}</li>
+</ol></nav>
+
 <form method="post" action="{{ ('/targets/' ~ target['id']) if target else '/targets' }}">
-  <label>Name <input name="name" value="{{ target['name'] if target else '' }}"></label>
-  <label>Match (regex on exam name) <input name="match" value="{{ target['match'] if target else '' }}"></label>
-  <label>Min seats <input name="min_seats" type="number" value="{{ target['min_seats'] if target else 1 }}"></label>
-  <label>Tiebreak
-    <select name="tiebreak">
-      {% for tb in ['earliest','latest','most_seats'] %}
-      <option value="{{ tb }}" {{ 'selected' if target and target['tiebreak']==tb else '' }}>{{ tb }}</option>
-      {% endfor %}
-    </select></label>
-  <label><input type="checkbox" name="enabled" {{ 'checked' if (not target) or target['enabled'] else '' }}> Enabled</label>
-  <label><input type="checkbox" name="dry_run" {{ 'checked' if (not target) or target['dry_run'] else '' }}> Dry-run</label>
-  <h3>Preferences (ranked; leave a row blank to ignore)</h3>
-  <div id="prefs">
-    {% set rows = prefs if prefs else [None, None, None] %}
-    {% for p in rows %}
-    <fieldset>
-      <label>Location regex <input name="pref_location" value="{{ p['location'] if p and p['location'] else '' }}"></label>
-      <label>Time range HH:MM-HH:MM <input name="pref_time_range" value="{{ p['time_range'] if p and p['time_range'] else '' }}"></label>
-      <label>Date range YYYY-MM-DD..YYYY-MM-DD <input name="pref_date_range" value="{{ p['date_range'] if p and p['date_range'] else '' }}"></label>
-      <label>Weekdays (comma, e.g. Fri,Sat) <input name="pref_weekdays" value="{{ p['weekdays'] if p and p['weekdays'] else '' }}"></label>
-    </fieldset>
-    {% endfor %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold">Exam</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Name <span class="text-secondary fw-normal">(label for you)</span></label>
+          <input class="form-control" name="name" value="{{ target['name'] if target else '' }}" placeholder="e.g. CPSC 313 quizzes" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Match <span class="text-secondary fw-normal">(regex on exam name)</span></label>
+          <input class="form-control font-monospace" name="match" value="{{ target['match'] if target else '' }}" placeholder="CPSC 313" required>
+          <div class="form-text">Matches anywhere in the exam name. <code>CPSC 313</code> catches every 313 exam.</div>
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label">Min seats</label>
+          <input class="form-control" type="number" min="1" name="min_seats" value="{{ target['min_seats'] if target else 1 }}">
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label">Tiebreak</label>
+          <select class="form-select" name="tiebreak">
+            {% for tb in ['earliest','latest','most_seats'] %}
+            <option value="{{ tb }}" {{ 'selected' if target and target['tiebreak']==tb else '' }}>{{ tb }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Which slot to take when several match.</div>
+        </div>
+        <div class="col-sm-4 d-flex align-items-center">
+          <div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="enabled" name="enabled" {{ 'checked' if (not target) or target['enabled'] else '' }}>
+              <label class="form-check-label" for="enabled">Enabled</label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="dry_run" name="dry_run" {{ 'checked' if (not target) or target['dry_run'] else '' }}>
+              <label class="form-check-label" for="dry_run">Dry-run <span class="text-secondary">(don't really book)</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <button type="submit">Save</button>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold">
+      Preferences <span class="text-secondary fw-normal">— ranked best-first; first row with an open slot wins. Blank filters = any.</span>
+    </div>
+    <div class="card-body">
+      {% set rows = prefs if prefs else [None, None, None] %}
+      {% for p in rows %}
+      <div class="row g-2 align-items-end mb-3 pb-3 {{ '' if loop.last else 'border-bottom' }}">
+        <div class="col-auto"><span class="badge rounded-pill text-bg-primary">#{{ loop.index }}</span></div>
+        <div class="col-md">
+          <label class="form-label small mb-1">Location regex</label>
+          <input class="form-control form-control-sm font-monospace" name="pref_location" value="{{ p['location'] if p and p['location'] else '' }}" placeholder="ICCS">
+        </div>
+        <div class="col-md">
+          <label class="form-label small mb-1">Time range</label>
+          <input class="form-control form-control-sm" name="pref_time_range" value="{{ p['time_range'] if p and p['time_range'] else '' }}" placeholder="15:00-17:00">
+        </div>
+        <div class="col-md">
+          <label class="form-label small mb-1">Date range</label>
+          <input class="form-control form-control-sm" name="pref_date_range" value="{{ p['date_range'] if p and p['date_range'] else '' }}" placeholder="2026-10-09">
+        </div>
+        <div class="col-md">
+          <label class="form-label small mb-1">Weekdays</label>
+          <input class="form-control form-control-sm" name="pref_weekdays" value="{{ p['weekdays'] if p and p['weekdays'] else '' }}" placeholder="Fri,Sat">
+        </div>
+      </div>
+      {% endfor %}
+      <div class="form-text">Times are PrairieTest's local time (Pacific). Time range matches the slot's start time.</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i>Save target</button>
+    <a class="btn btn-outline-secondary" href="/">Cancel</a>
+  </div>
 </form>
 {% endblock %}

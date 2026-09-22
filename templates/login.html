@@ -1,10 +1,31 @@
-{% extends "base.html" %}{% block title %}Login{% endblock %}
+{% extends "base.html" %}{% block title %}Sign in{% endblock %}
 {% block body %}
-<h1>Sign in with CWL</h1>
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post" action="/login">
-  <label>CWL username <input name="username" autocomplete="username"></label>
-  <label>CWL password <input name="password" type="password" autocomplete="current-password"></label>
-  <button type="submit">Sign in</button>
-</form>
+<div class="row justify-content-center">
+  <div class="col-sm-9 col-md-6 col-lg-5">
+    <div class="text-center mb-4">
+      <div class="display-6 fw-bold"><i class="bi bi-crosshair2 text-info"></i> Snipe Bot</div>
+      <p class="text-secondary mb-0">Automated PrairieTest seat booking</p>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h5 mb-3">Sign in with CWL</h1>
+        {% if error %}<div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-1"></i>{{ error }}</div>{% endif %}
+        <form method="post" action="/login">
+          <div class="mb-3">
+            <label class="form-label">CWL username</label>
+            <input class="form-control" name="username" autocomplete="username" autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">CWL password</label>
+            <input class="form-control" type="password" name="password" autocomplete="current-password">
+          </div>
+          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i>Sign in</button>
+        </form>
+      </div>
+    </div>
+    <p class="text-secondary small text-center mt-3">
+      Checked against this instance's configured CWL. Nothing is stored beyond your session.
+    </p>
+  </div>
+</div>
 {% endblock %}

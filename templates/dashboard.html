@@ -1,35 +1,99 @@
 {% extends "base.html" %}{% block title %}Dashboard{% endblock %}
 {% block body %}
-<section>
-  <h2>Session</h2>
-  <p>State: <span class="pill">{{ session_state }}</span>
-     Watching: <span class="pill">{{ "on" if watch_running else "off" }}</span>
-     Poll: {{ poll_interval }}s</p>
-  <form method="post" action="/connect" style="display:inline"><button>Connect</button></form>
-  <form method="post" action="/watch/{{ 'stop' if watch_running else 'start' }}" style="display:inline">
-    <button>{{ "Stop" if watch_running else "Start" }} watching</button></form>
-</section>
-<section>
-  <h2>Watch targets <a href="/targets/new">+ add</a></h2>
-  <table><tr><th>Name</th><th>Match</th><th>Prefs</th><th>Enabled</th><th>Dry-run</th><th></th></tr>
-  {% for t in targets %}
-    <tr>
-      <td><a href="/targets/{{ t['id'] }}">{{ t['name'] }}</a></td>
-      <td><code>{{ t['match'] }}</code></td>
-      <td>{{ prefs_by_target[t['id']]|length }}</td>
-      <td><form method="post" action="/targets/{{ t['id'] }}/toggle"><input type="hidden" name="field" value="enabled"><button>{{ "yes" if t['enabled'] else "no" }}</button></form></td>
-      <td><form method="post" action="/targets/{{ t['id'] }}/toggle"><input type="hidden" name="field" value="dry_run"><button>{{ "yes" if t['dry_run'] else "no" }}</button></form></td>
-      <td><form method="post" action="/targets/{{ t['id'] }}/delete" onsubmit="return confirm('Delete?')"><button>delete</button></form></td>
-    </tr>
-  {% endfor %}
-  </table>
-</section>
-<section>
-  <h2>Recent bookings</h2>
-  <table><tr><th>When</th><th>Exam</th><th>Room</th><th>Slot</th><th>Dry-run</th></tr>
-  {% for b in bookings %}
-    <tr><td>{{ b['booked_at'] }}</td><td>{{ b['exam_name'] }}</td><td>{{ b['room'] }}</td><td>{{ b['slot_start'] }}</td><td>{{ "yes" if b['dry_run'] else "no" }}</td></tr>
-  {% endfor %}
-  </table>
-</section>
+
+{% set state_map = {
+  'connected':    ('success',   'bi-check-circle-fill',   'Connected'),
+  'connecting':   ('warning',   'bi-hourglass-split',     'Connecting — approve Duo on your phone'),
+  'auth_failed':  ('danger',    'bi-x-octagon-fill',      'Login failed'),
+  'not_connected':('secondary', 'bi-plug',                'Not connected')
+} %}
+{% set s = state_map.get(session_state, ('secondary', 'bi-question-circle', session_state)) %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Dashboard</h1>
+  <span class="badge rounded-pill text-bg-{{ 'success' if watch_running else 'secondary' }}">
+    <i class="bi {{ 'bi-broadcast' if watch_running else 'bi-pause-circle' }} me-1"></i>
+    Watcher {{ "running" if watch_running else "paused" }} · every {{ poll_interval }}s
+  </span>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <div class="flex-grow-1">
+      <div class="text-secondary small text-uppercase fw-semibold">PrairieTest session</div>
+      <div class="fs-5"><span class="badge text-bg-{{ s[0] }}"><i class="bi {{ s[1] }} me-1"></i>{{ s[2] }}</span></div>
+    </div>
+    <form method="post" action="/connect">
+      <button class="btn btn-primary"><i class="bi bi-plug-fill me-1"></i>Connect</button>
+    </form>
+    <form method="post" action="/watch/{{ 'stop' if watch_running else 'start' }}">
+      <button class="btn btn-outline-{{ 'danger' if watch_running else 'success' }}">
+        <i class="bi {{ 'bi-pause-fill' if watch_running else 'bi-play-fill' }} me-1"></i>{{ "Pause" if watch_running else "Start" }} watching
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <span class="fw-semibold"><i class="bi bi-bullseye me-1"></i>Watch targets</span>
+    <a class="btn btn-sm btn-primary" href="/targets/new"><i class="bi bi-plus-lg me-1"></i>Add target</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Name</th><th>Match</th><th class="text-center">Prefs</th><th class="text-center">Enabled</th><th class="text-center">Dry-run</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for t in targets %}
+        <tr>
+          <td><a class="fw-semibold text-decoration-none" href="/targets/{{ t['id'] }}">{{ t['name'] }}</a></td>
+          <td><code class="text-body">{{ t['match'] }}</code></td>
+          <td class="text-center"><span class="badge rounded-pill text-bg-light border">{{ prefs_by_target[t['id']]|length }}</span></td>
+          <td class="text-center">
+            <form method="post" action="/targets/{{ t['id'] }}/toggle" class="d-inline"><input type="hidden" name="field" value="enabled">
+              <button class="btn btn-sm {{ 'btn-success' if t['enabled'] else 'btn-outline-secondary' }}">{{ "On" if t['enabled'] else "Off" }}</button>
+            </form>
+          </td>
+          <td class="text-center">
+            <form method="post" action="/targets/{{ t['id'] }}/toggle" class="d-inline"><input type="hidden" name="field" value="dry_run">
+              <button class="btn btn-sm {{ 'btn-warning' if t['dry_run'] else 'btn-outline-secondary' }}">{{ "Dry" if t['dry_run'] else "Live" }}</button>
+            </form>
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-secondary" href="/targets/{{ t['id'] }}"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="/targets/{{ t['id'] }}/delete" class="d-inline" onsubmit="return confirm('Delete this target?')">
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-center text-secondary py-4">No targets yet. <a href="/targets/new">Add one</a> to start watching.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-check me-1"></i>Recent bookings</div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light"><tr><th>When</th><th>Exam</th><th>Room</th><th>Slot</th><th class="text-center">Mode</th></tr></thead>
+      <tbody>
+      {% for b in bookings %}
+        <tr>
+          <td class="text-nowrap small text-secondary" data-ts-utc="{{ b['booked_at'] }}">{{ b['booked_at'] }}</td>
+          <td>{{ b['exam_name'] }}</td>
+          <td>{{ b['room'] }}</td>
+          <td class="text-nowrap" data-ts-iso="{{ b['slot_start'] }}">{{ b['slot_start'] }}</td>
+          <td class="text-center"><span class="badge text-bg-{{ 'warning' if b['dry_run'] else 'success' }}">{{ "Dry-run" if b['dry_run'] else "Booked" }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-secondary py-4">No bookings yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
