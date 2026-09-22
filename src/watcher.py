@@ -19,26 +19,49 @@ _LOGGED_IN_MARKERS = ("Exams available for reservations", "PrairieTest Homepage"
 def exam_url(exam_id: str) -> str:
     return f"{BASE}/pt/student/exam/{exam_id}"
 
+_ROW_CLASS_HINTS = ("list-group-item", "card", "row")
+
+def _exam_search_text(a) -> str:
+    """Text to match an exam link against.
+
+    On "available for reservations" rows the <a> text is just the button label
+    ("Make a reservation"); the exam name lives in the link's aria-label or a
+    sibling cell. So we combine the link text, its aria-label, and the text of
+    the nearest enclosing row/card (bounded, never the whole page)."""
+    parts = [a.get_text(" ", strip=True)]
+    aria = a.get("aria-label")
+    if aria:
+        parts.append(aria)
+    node, depth, row = a.parent, 0, None
+    while node is not None and node.name not in ("body", "html", "[document]") and depth < 5:
+        cls = " ".join(node.get("class", []) or [])
+        if any(k in cls for k in _ROW_CLASS_HINTS):
+            row = node
+            break
+        node, depth = node.parent, depth + 1
+    if row is not None:
+        parts.append(row.get_text(" ", strip=True))
+    return " ".join(p for p in parts if p)
+
+def _exam_name(a) -> str:
+    return a.get("aria-label") or a.get_text(" ", strip=True)
+
 def discover_exam_id(home_html: str, match: re.Pattern) -> str | None:
-    soup = BeautifulSoup(home_html, "lxml")
-    for a in soup.find_all("a", href=_EXAM_HREF):
-        if match.search(a.get_text(" ", strip=True)):
-            return _EXAM_HREF.search(a["href"]).group(1)
-    return None
+    m = matching_exams(home_html, match)
+    return m[0][0] if m else None
 
 def matching_exams(home_html: str, pattern) -> list[tuple[str, str]]:
     soup = BeautifulSoup(home_html, "lxml")
     seen: set[str] = set()
     out: list[tuple[str, str]] = []
     for a in soup.find_all("a", href=_EXAM_HREF):
-        text = a.get_text(" ", strip=True)
-        if not pattern.search(text):
+        if not pattern.search(_exam_search_text(a)):
             continue
         exam_id = _EXAM_HREF.search(a["href"]).group(1)
         if exam_id in seen:
             continue
         seen.add(exam_id)
-        out.append((exam_id, text))
+        out.append((exam_id, _exam_name(a)))
     return out
 
 def is_logged_out(html: str, url: str) -> bool:
