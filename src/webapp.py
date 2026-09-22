@@ -42,11 +42,136 @@ def create_app(db: Database | None = None) -> FastAPI:
         request.session.clear()
         return RedirectResponse("/login", status_code=303)
 
+    def _prefs_from_form(form) -> list[dict]:
+        locs = form.getlist("pref_location")
+        times = form.getlist("pref_time_range")
+        dates = form.getlist("pref_date_range")
+        days = form.getlist("pref_weekdays")
+        prefs = []
+        for i in range(max(len(locs), len(times), len(dates), len(days), 0)):
+            loc = (locs[i] if i < len(locs) else "").strip()
+            tr = (times[i] if i < len(times) else "").strip()
+            dr = (dates[i] if i < len(dates) else "").strip()
+            wd = (days[i] if i < len(days) else "").strip()
+            if not any([loc, tr, dr, wd]):
+                continue
+            prefs.append({
+                "location": loc or None, "time_range": tr or None,
+                "date_range": dr or None,
+                "weekdays": [d.strip() for d in wd.split(",") if d.strip()] or None,
+            })
+        return prefs
+
     @app.get("/", response_class=HTMLResponse)
     def dashboard(request: Request):
         if not require_user(request):
             return RedirectResponse("/login", status_code=303)
-        return HTMLResponse("<p>ok</p>")  # replaced in Task 6
+        db = app.state.db
+        targets = db.list_targets()
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "targets": targets,
+            "prefs_by_target": {r["id"]: db.get_preferences(r["id"]) for r in targets},
+            "bookings": db.recent_bookings(10),
+            "session_state": db.get_kv("session_state", "not_connected"),
+            "watch_running": db.get_kv("watch_running", "1") == "1",
+            "poll_interval": db.get_kv("poll_interval", "300"),
+        })
+
+    @app.get("/targets/new", response_class=HTMLResponse)
+    def target_new(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        return templates.TemplateResponse("target_form.html", {"request": request, "target": None, "prefs": []})
+
+    @app.post("/targets")
+    async def target_create(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        form = await request.form()
+        app.state.db.upsert_target(
+            name=form.get("name", "target"), match=form.get("match", ".*"),
+            min_seats=int(form.get("min_seats", "1")), tiebreak=form.get("tiebreak", "earliest"),
+            enabled=form.get("enabled") == "on", dry_run=form.get("dry_run") == "on",
+            preferences=_prefs_from_form(form),
+        )
+        return RedirectResponse("/", status_code=303)
+
+    @app.get("/targets/{tid}", response_class=HTMLResponse)
+    def target_edit(request: Request, tid: int):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        db = app.state.db
+        return templates.TemplateResponse("target_form.html",
+            {"request": request, "target": db.get_target(tid), "prefs": db.get_preferences(tid)})
+
+    @app.post("/targets/{tid}")
+    async def target_update(request: Request, tid: int):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        form = await request.form()
+        app.state.db.upsert_target(
+            name=form.get("name", "target"), match=form.get("match", ".*"),
+            min_seats=int(form.get("min_seats", "1")), tiebreak=form.get("tiebreak", "earliest"),
+            enabled=form.get("enabled") == "on", dry_run=form.get("dry_run") == "on",
+            preferences=_prefs_from_form(form), target_id=tid,
+        )
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/targets/{tid}/delete")
+    def target_delete(request: Request, tid: int):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        app.state.db.delete_target(tid)
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/targets/{tid}/toggle")
+    async def target_toggle(request: Request, tid: int):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        form = await request.form()
+        field = form.get("field")
+        row = app.state.db.get_target(tid)
+        if row and field in ("enabled", "dry_run"):
+            app.state.db.set_target_flags(tid, **{field: not bool(row[field])})
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/watch/{action}")
+    def watch_control(request: Request, action: str):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        app.state.db.set_kv("watch_running", "1" if action == "start" else "0")
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/connect")
+    def connect(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        # The engine loop establishes the session; requesting a connect just
+        # clears any failed state so the loop retries on its next pass.
+        app.state.db.set_kv("session_state", "connecting")
+        return RedirectResponse("/", status_code=303)
+
+    @app.get("/logs", response_class=HTMLResponse)
+    def logs(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        return templates.TemplateResponse("logs.html", {"request": request})
+
+    @app.get("/api/status")
+    def api_status(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        db = app.state.db
+        return {"session_state": db.get_kv("session_state", "not_connected"),
+                "watch_running": db.get_kv("watch_running", "1") == "1"}
+
+    @app.get("/api/events")
+    def api_events(request: Request):
+        if not require_user(request):
+            return RedirectResponse("/login", status_code=303)
+        rows = app.state.db.recent_events(100)
+        return {"events": [dict(r) for r in rows]}
 
     return app
 

@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}Logs{% endblock %}
+{% block body %}
+<h1>Activity</h1>
+<table id="events"><tr><th>Time</th><th>Level</th><th>Message</th></tr></table>
+<script>window.__LOGS__ = true;</script>
+{% endblock %}

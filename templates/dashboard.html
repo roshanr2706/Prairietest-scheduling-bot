@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% block title %}Dashboard{% endblock %}
+{% block body %}
+<section>
+  <h2>Session</h2>
+  <p>State: <span class="pill">{{ session_state }}</span>
+     Watching: <span class="pill">{{ "on" if watch_running else "off" }}</span>
+     Poll: {{ poll_interval }}s</p>
+  <form method="post" action="/connect" style="display:inline"><button>Connect</button></form>
+  <form method="post" action="/watch/{{ 'stop' if watch_running else 'start' }}" style="display:inline">
+    <button>{{ "Stop" if watch_running else "Start" }} watching</button></form>
+</section>
+<section>
+  <h2>Watch targets <a href="/targets/new">+ add</a></h2>
+  <table><tr><th>Name</th><th>Match</th><th>Prefs</th><th>Enabled</th><th>Dry-run</th><th></th></tr>
+  {% for t in targets %}
+    <tr>
+      <td><a href="/targets/{{ t['id'] }}">{{ t['name'] }}</a></td>
+      <td><code>{{ t['match'] }}</code></td>
+      <td>{{ prefs_by_target[t['id']]|length }}</td>
+      <td><form method="post" action="/targets/{{ t['id'] }}/toggle"><input type="hidden" name="field" value="enabled"><button>{{ "yes" if t['enabled'] else "no" }}</button></form></td>
+      <td><form method="post" action="/targets/{{ t['id'] }}/toggle"><input type="hidden" name="field" value="dry_run"><button>{{ "yes" if t['dry_run'] else "no" }}</button></form></td>
+      <td><form method="post" action="/targets/{{ t['id'] }}/delete" onsubmit="return confirm('Delete?')"><button>delete</button></form></td>
+    </tr>
+  {% endfor %}
+  </table>
+</section>
+<section>
+  <h2>Recent bookings</h2>
+  <table><tr><th>When</th><th>Exam</th><th>Room</th><th>Slot</th><th>Dry-run</th></tr>
+  {% for b in bookings %}
+    <tr><td>{{ b['booked_at'] }}</td><td>{{ b['exam_name'] }}</td><td>{{ b['room'] }}</td><td>{{ b['slot_start'] }}</td><td>{{ "yes" if b['dry_run'] else "no" }}</td></tr>
+  {% endfor %}
+  </table>
+</section>
+{% endblock %}
