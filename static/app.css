@@ -1,0 +1,10 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { max-width: 900px; margin: 0 auto; padding: 1rem; }
+header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #8888; padding-bottom:.5rem; margin-bottom:1rem; }
+nav a { margin-left: 1rem; }
+label { display:block; margin:.5rem 0; }
+input, select { padding:.3rem; }
+.error { color:#c00; }
+table { width:100%; border-collapse: collapse; }
+th, td { text-align:left; padding:.3rem .5rem; border-bottom:1px solid #8884; }
+.pill { padding:.1rem .5rem; border-radius:1rem; border:1px solid #8888; font-size:.8rem; }

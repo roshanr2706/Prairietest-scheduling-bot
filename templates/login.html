@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}Login{% endblock %}
+{% block body %}
+<h1>Sign in with CWL</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/login">
+  <label>CWL username <input name="username" autocomplete="username"></label>
+  <label>CWL password <input name="password" type="password" autocomplete="current-password"></label>
+  <button type="submit">Sign in</button>
+</form>
+{% endblock %}

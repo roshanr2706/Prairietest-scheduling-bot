@@ -35,3 +35,13 @@ def test_next_interval_ramps_near_open_time():
     poll = PollConfig(interval_seconds=15, jitter_seconds=0, open_time=ot, ramp_interval_seconds=2)
     assert W.next_interval(ot - timedelta(seconds=30), poll) == 2   # within ramp window
     assert W.next_interval(ot - timedelta(seconds=300), poll) == 15 # outside window
+
+def test_matching_exams_returns_all_matches():
+    html = '''
+    <a href="/pt/student/exam/1">CPSC 313 (2026W1): Quiz 1</a>
+    <a href="/pt/student/exam/2">CPSC 313 (2026W1): Quiz 2</a>
+    <a href="/pt/student/exam/3">CPSC 320 (2026W1): Midterm</a>
+    <a href="/pt/student/exam/1">CPSC 313 (2026W1): Quiz 1</a>
+    '''
+    out = W.matching_exams(html, re.compile("CPSC 313", re.I))
+    assert out == [("1", "CPSC 313 (2026W1): Quiz 1"), ("2", "CPSC 313 (2026W1): Quiz 2")]

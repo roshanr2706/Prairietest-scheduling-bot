@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Snipe Bot{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head><body>
+  <header><strong>PrairieTest Snipe Bot</strong>
+    {% if request.session.get('user') %}<nav>
+      <a href="/">Dashboard</a> <a href="/logs">Logs</a> <a href="/logout">Logout</a>
+    </nav>{% endif %}
+  </header>
+  <main>{% block body %}{% endblock %}</main>
+  <script src="/static/app.js"></script>
+</body></html>

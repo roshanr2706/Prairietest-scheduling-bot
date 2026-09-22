@@ -3,7 +3,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
-# config.yaml and data/storageState.json are provided at runtime via volume mounts
-# (see docker-compose.yml), so they are intentionally not baked into the image.
-ENV CONFIG_PATH=/app/config.yaml STORAGE_STATE=/app/data/storageState.json
-CMD ["python", "-m", "src.main"]
+COPY templates ./templates
+COPY static ./static
+# data/ (SQLite state + storageState.json + debug) is provided at runtime via a
+# read-write volume mount (see docker-compose.yml).
+ENV STORAGE_STATE=/app/data/storageState.json STATE_DB=/app/data/state.db
+EXPOSE 8000
+CMD ["uvicorn", "src.webapp:app", "--host", "0.0.0.0", "--port", "8000"]

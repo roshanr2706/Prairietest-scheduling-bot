@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block title %}Target{% endblock %}
+{% block body %}
+<h1>{{ "Edit" if target else "New" }} target</h1>
+<form method="post" action="{{ ('/targets/' ~ target['id']) if target else '/targets' }}">
+  <label>Name <input name="name" value="{{ target['name'] if target else '' }}"></label>
+  <label>Match (regex on exam name) <input name="match" value="{{ target['match'] if target else '' }}"></label>
+  <label>Min seats <input name="min_seats" type="number" value="{{ target['min_seats'] if target else 1 }}"></label>
+  <label>Tiebreak
+    <select name="tiebreak">
+      {% for tb in ['earliest','latest','most_seats'] %}
+      <option value="{{ tb }}" {{ 'selected' if target and target['tiebreak']==tb else '' }}>{{ tb }}</option>
+      {% endfor %}
+    </select></label>
+  <label><input type="checkbox" name="enabled" {{ 'checked' if (not target) or target['enabled'] else '' }}> Enabled</label>
+  <label><input type="checkbox" name="dry_run" {{ 'checked' if (not target) or target['dry_run'] else '' }}> Dry-run</label>
+  <h3>Preferences (ranked; leave a row blank to ignore)</h3>
+  <div id="prefs">
+    {% set rows = prefs if prefs else [None, None, None] %}
+    {% for p in rows %}
+    <fieldset>
+      <label>Location regex <input name="pref_location" value="{{ p['location'] if p and p['location'] else '' }}"></label>
+      <label>Time range HH:MM-HH:MM <input name="pref_time_range" value="{{ p['time_range'] if p and p['time_range'] else '' }}"></label>
+      <label>Date range YYYY-MM-DD..YYYY-MM-DD <input name="pref_date_range" value="{{ p['date_range'] if p and p['date_range'] else '' }}"></label>
+      <label>Weekdays (comma, e.g. Fri,Sat) <input name="pref_weekdays" value="{{ p['weekdays'] if p and p['weekdays'] else '' }}"></label>
+    </fieldset>
+    {% endfor %}
+  </div>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}
