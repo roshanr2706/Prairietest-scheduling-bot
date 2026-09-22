@@ -174,6 +174,22 @@ async def run_engine(db, notifier: Notifier, storage_state_path: str, stop_event
                     targets, discovered, pages,
                     already_booked=db.already_booked, dry_run_by_target=dry_by,
                 )
+                # Diagnostic heartbeat so the Logs page shows what each scan saw.
+                matched = [(tid, eid, nm) for tid, ms in discovered.items() for eid, nm in ms]
+                db.add_event("info",
+                    f"scan: {len(targets)} target(s), {len(matched)} matching exam(s), "
+                    f"{len(decisions)} to book")
+                if not matched:
+                    pats = ", ".join(sorted({ex.match.pattern for _, ex in targets}))
+                    db.add_event("info", f"scan: nothing on 'available for reservations' matches [{pats}]")
+                decided = {(d.target_id, d.exam_id) for d in decisions}
+                for tid, eid, nm in matched:
+                    if (tid, eid) in decided:
+                        continue
+                    if db.already_booked(tid, eid):
+                        db.add_event("info", f"'{nm}': already booked — skipping")
+                    else:
+                        db.add_event("info", f"'{nm}': found, but no open seat matches your preferences")
                 for d in decisions:
                     dry = dry_by.get(d.target_id, True)
                     await page.goto(exam_url(d.exam_id), wait_until="domcontentloaded")
