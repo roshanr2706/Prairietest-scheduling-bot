@@ -43,6 +43,9 @@ class Database:
             parent.mkdir(parents=True, exist_ok=True)
         con = self._connect()
         con.executescript(_SCHEMA)
+        cols = {r["name"] for r in con.execute("PRAGMA table_info(targets)")}
+        if "exclude" not in cols:
+            con.execute("ALTER TABLE targets ADD COLUMN exclude TEXT")
         con.commit()
         con.close()
 
@@ -79,21 +82,22 @@ class Database:
         return rows
 
     def upsert_target(self, name, match, min_seats, tiebreak, enabled, dry_run,
-                      preferences, target_id=None) -> int:
+                      preferences, target_id=None, exclude=None) -> int:
+        exclude = (exclude or "").strip() or None
         con = self._connect()
         cur = con.cursor()
         if target_id is None:
             cur.execute(
-                "INSERT INTO targets(name, match, min_seats, tiebreak, enabled, dry_run) "
-                "VALUES (?,?,?,?,?,?)",
-                (name, match, int(min_seats), tiebreak, int(bool(enabled)), int(bool(dry_run))),
+                "INSERT INTO targets(name, match, exclude, min_seats, tiebreak, enabled, dry_run) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (name, match, exclude, int(min_seats), tiebreak, int(bool(enabled)), int(bool(dry_run))),
             )
             target_id = cur.lastrowid
         else:
             cur.execute(
-                "UPDATE targets SET name=?, match=?, min_seats=?, tiebreak=?, enabled=?, dry_run=? "
+                "UPDATE targets SET name=?, match=?, exclude=?, min_seats=?, tiebreak=?, enabled=?, dry_run=? "
                 "WHERE id=?",
-                (name, match, int(min_seats), tiebreak, int(bool(enabled)), int(bool(dry_run)), target_id),
+                (name, match, exclude, int(min_seats), tiebreak, int(bool(enabled)), int(bool(dry_run)), target_id),
             )
             cur.execute("DELETE FROM preferences WHERE target_id=?", (target_id,))
         for pos, p in enumerate(preferences or []):
@@ -140,6 +144,7 @@ class Database:
         return TargetExam(
             match=_compile_regex(row["match"]), exam_id=None,
             min_seats=row["min_seats"], tiebreak=row["tiebreak"], preferences=prefs,
+            exclude=_compile_regex(row["exclude"]) if row["exclude"] else None,
         )
 
     # ---- bookings ----

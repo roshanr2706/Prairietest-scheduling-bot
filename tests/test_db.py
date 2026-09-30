@@ -90,3 +90,27 @@ def test_kv(tmp_path):
     assert db.get_kv("session_state", "not_connected") == "not_connected"
     db.set_kv("session_state", "connected")
     assert db.get_kv("session_state") == "connected"
+
+def test_exclude_round_trips(tmp_path):
+    db = make(tmp_path)
+    tid = db.upsert_target(name="313", match="CPSC 313", exclude="rewrite", min_seats=1,
+                           tiebreak="earliest", enabled=True, dry_run=True, preferences=[])
+    assert db.get_target(tid)["exclude"] == "rewrite"
+    ex = db.to_target_exam(tid)
+    assert ex.exclude.search("Quiz 1 REWRITE")
+    db.upsert_target(name="313", match="CPSC 313", exclude="", min_seats=1,
+                     tiebreak="earliest", enabled=True, dry_run=True, preferences=[], target_id=tid)
+    assert db.to_target_exam(tid).exclude is None
+
+def test_exclude_column_added_to_old_db(tmp_path):
+    import sqlite3
+    p = str(tmp_path / "old.db")
+    con = sqlite3.connect(p)
+    con.execute("CREATE TABLE targets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, "
+                "match TEXT NOT NULL, min_seats INTEGER NOT NULL DEFAULT 1, tiebreak TEXT NOT NULL DEFAULT 'earliest', "
+                "enabled INTEGER NOT NULL DEFAULT 1, dry_run INTEGER NOT NULL DEFAULT 1, "
+                "created_at TEXT NOT NULL DEFAULT (datetime('now')))")
+    con.execute("INSERT INTO targets(name, match) VALUES ('a', 'X')")
+    con.commit(); con.close()
+    db = Database(p)
+    assert db.to_target_exam(1).exclude is None

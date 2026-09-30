@@ -27,6 +27,7 @@ class TargetExam:
     min_seats: int
     tiebreak: str
     preferences: list[PreferenceRule]
+    exclude: re.Pattern | None = None
 
 @dataclass
 class PollConfig:
@@ -113,6 +114,7 @@ def load_config(path: str) -> AppConfig:
             min_seats=int(e.get("min_seats", 1)),
             tiebreak=tiebreak,
             preferences=[_rule(r) for r in e.get("preferences", [])],
+            exclude=_compile_regex(e["exclude"]) if e.get("exclude") else None,
         ))
     if not exams:
         raise ConfigError("At least one target_exam is required")

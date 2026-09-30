@@ -54,7 +54,7 @@
       {% for t in targets %}
         <tr>
           <td><a class="fw-semibold text-decoration-none" href="/targets/{{ t['id'] }}">{{ t['name'] }}</a></td>
-          <td><code class="text-body">{{ t['match'] }}</code></td>
+          <td><code class="text-body">{{ t['match'] }}</code>{% if t['exclude'] %} <span class="text-secondary small">not</span> <code class="text-danger">{{ t['exclude'] }}</code>{% endif %}</td>
           <td class="text-center"><span class="badge rounded-pill text-bg-light border">{{ prefs_by_target[t['id']]|length }}</span></td>
           <td class="text-center">
             <form method="post" action="/targets/{{ t['id'] }}/toggle" class="d-inline"><input type="hidden" name="field" value="enabled">

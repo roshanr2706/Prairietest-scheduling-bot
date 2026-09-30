@@ -46,16 +46,20 @@ def _exam_search_text(a) -> str:
 def _exam_name(a) -> str:
     return a.get("aria-label") or a.get_text(" ", strip=True)
 
-def discover_exam_id(home_html: str, match: re.Pattern) -> str | None:
-    m = matching_exams(home_html, match)
+def discover_exam_id(home_html: str, match: re.Pattern, exclude: re.Pattern | None = None) -> str | None:
+    m = matching_exams(home_html, match, exclude)
     return m[0][0] if m else None
 
-def matching_exams(home_html: str, pattern) -> list[tuple[str, str]]:
+def matching_exams(home_html: str, pattern, exclude=None) -> list[tuple[str, str]]:
+    """Exams whose text matches `pattern`, minus any that also match `exclude`."""
     soup = BeautifulSoup(home_html, "lxml")
     seen: set[str] = set()
     out: list[tuple[str, str]] = []
     for a in soup.find_all("a", href=_EXAM_HREF):
-        if not pattern.search(_exam_search_text(a)):
+        text = _exam_search_text(a)
+        if not pattern.search(text):
+            continue
+        if exclude is not None and exclude.search(text):
             continue
         exam_id = _EXAM_HREF.search(a["href"]).group(1)
         if exam_id in seen:
@@ -129,7 +133,7 @@ async def _resolve_exam_id(page, exam):
     if exam.exam_id:
         return exam.exam_id
     await page.goto(HOME, wait_until="domcontentloaded")
-    return discover_exam_id(await page.content(), exam.match)
+    return discover_exam_id(await page.content(), exam.match, exam.exclude)
 
 async def run_watch(config, notifier, storage_state_path: str):
     notifier.send("started", f"watching {len(config.target_exams)} exam(s), dry_run={config.dry_run}")

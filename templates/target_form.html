@@ -19,6 +19,11 @@
           <input class="form-control font-monospace" name="match" value="{{ target['match'] if target else '' }}" placeholder="CPSC 313" required>
           <div class="form-text">Matches anywhere in the exam name. <code>CPSC 313</code> catches every 313 exam.</div>
         </div>
+        <div class="col-md-6 offset-md-6">
+          <label class="form-label">Exclude <span class="text-secondary fw-normal">(optional regex)</span></label>
+          <input class="form-control font-monospace" name="exclude" value="{{ (target['exclude'] or '') if target else '' }}" placeholder="rewrite">
+          <div class="form-text">Skip exams that also match this. <code>rewrite|retake</code> skips both.</div>
+        </div>
         <div class="col-sm-4">
           <label class="form-label">Min seats</label>
           <input class="form-control" type="number" min="1" name="min_seats" value="{{ target['min_seats'] if target else 1 }}">
