@@ -1,5 +1,6 @@
 target_exams:
   - match: "CPSC 313 Quiz 1"
+    exclude: null             # optional regex; skip exams that also match (e.g. "rewrite")
     exam_id: null
     min_seats: 1
     tiebreak: earliest        # earliest | latest | most_seats

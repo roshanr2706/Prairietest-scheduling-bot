@@ -46,7 +46,7 @@ def test_create_and_list_target(client):
     c, db = client
     login(c)
     r = c.post("/targets", data={
-        "name": "313 Friday", "match": "CPSC 313", "min_seats": "1",
+        "name": "313 Friday", "match": "CPSC 313", "exclude": "rewrite", "min_seats": "1",
         "tiebreak": "earliest", "enabled": "on", "dry_run": "on",
         "pref_location": ["ICCS", ""], "pref_time_range": ["15:00-17:00", ""],
         "pref_date_range": ["", ""], "pref_weekdays": ["Fri", ""],
@@ -54,6 +54,7 @@ def test_create_and_list_target(client):
     assert r.status_code in (302, 303)
     rows = db.list_targets()
     assert len(rows) == 1 and rows[0]["name"] == "313 Friday"
+    assert rows[0]["exclude"] == "rewrite"
     assert len(db.get_preferences(rows[0]["id"])) == 1  # blank row ignored
     body = c.get("/").text
     assert "313 Friday" in body
@@ -116,3 +117,12 @@ def test_connect_sets_connecting(client):
     login(c)
     c.post("/connect")
     assert db.get_kv("session_state") == "connecting"
+
+def test_target_form_shows_exclude(client):
+    c, db = client
+    login(c)
+    assert 'name="exclude"' in c.get("/targets/new").text
+    tid = db.upsert_target(name="a", match="CPSC 313", exclude="rewrite", min_seats=1,
+                           tiebreak="earliest", enabled=True, dry_run=True, preferences=[])
+    assert 'value="rewrite"' in c.get(f"/targets/{tid}").text
+    assert "rewrite" in c.get("/").text

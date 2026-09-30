@@ -90,7 +90,7 @@ async def _discover_and_pages(page, targets):
     home_html = await page.content()
     discovered, pages = {}, {}
     for target_id, exam in targets:
-        matches = matching_exams(home_html, exam.match)
+        matches = matching_exams(home_html, exam.match, exam.exclude)
         discovered[target_id] = matches
         for exam_id, _ in matches:
             if exam_id not in pages:

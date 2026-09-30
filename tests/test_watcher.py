@@ -94,3 +94,11 @@ def test_matching_exams_scopes_to_row_not_whole_page():
     '''
     out = W.matching_exams(html, re.compile("CPSC 320", re.I))
     assert out == [("11", "Make a reservation for CPSC 320 Test 1")]
+
+def test_matching_exams_exclude_skips_matching_rows():
+    html = '''
+    <a href="/pt/student/exam/1">CPSC 313 (2026W1): Quiz 1</a>
+    <a href="/pt/student/exam/2">CPSC 313 (2026W1): Quiz 1 Rewrite</a>
+    '''
+    out = W.matching_exams(html, re.compile("CPSC 313", re.I), re.compile("rewrite", re.I))
+    assert out == [("1", "CPSC 313 (2026W1): Quiz 1")]

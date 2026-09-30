@@ -97,7 +97,7 @@ def create_app(db: Database | None = None) -> FastAPI:
             return RedirectResponse("/login", status_code=303)
         form = await request.form()
         app.state.db.upsert_target(
-            name=form.get("name", "target"), match=form.get("match", ".*"),
+            name=form.get("name", "target"), match=form.get("match", ".*"), exclude=form.get("exclude"),
             min_seats=int(form.get("min_seats", "1")), tiebreak=form.get("tiebreak", "earliest"),
             enabled=form.get("enabled") == "on", dry_run=form.get("dry_run") == "on",
             preferences=_prefs_from_form(form),
@@ -118,7 +118,7 @@ def create_app(db: Database | None = None) -> FastAPI:
             return RedirectResponse("/login", status_code=303)
         form = await request.form()
         app.state.db.upsert_target(
-            name=form.get("name", "target"), match=form.get("match", ".*"),
+            name=form.get("name", "target"), match=form.get("match", ".*"), exclude=form.get("exclude"),
             min_seats=int(form.get("min_seats", "1")), tiebreak=form.get("tiebreak", "earliest"),
             enabled=form.get("enabled") == "on", dry_run=form.get("dry_run") == "on",
             preferences=_prefs_from_form(form), target_id=tid,
