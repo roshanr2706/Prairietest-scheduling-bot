@@ -68,6 +68,17 @@ def matching_exams(home_html: str, pattern, exclude=None) -> list[tuple[str, str
         out.append((exam_id, _exam_name(a)))
     return out
 
+_RESERVE_PREFIX = "Make a reservation for "
+
+def has_reservation(home_html: str, exam_name: str) -> bool:
+    """True if the home page's "Exam reservations" list has a link titled
+    exactly like this exam. `exam_name` may carry the available-list prefix
+    ("Make a reservation for ..."), which is stripped."""
+    title = exam_name[len(_RESERVE_PREFIX):] if exam_name.startswith(_RESERVE_PREFIX) else exam_name
+    title = title.strip()
+    soup = BeautifulSoup(home_html, "lxml")
+    return any(a.get_text(" ", strip=True) == title for a in soup.find_all("a"))
+
 def is_logged_out(html: str, url: str) -> bool:
     u = (url or "").lower()
     if any(m in u for m in _LOGOUT_URL_MARKERS):

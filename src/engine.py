@@ -34,8 +34,8 @@ import random
 import traceback
 from src.config import AuthConfig
 from src.notifier import Notifier
-from src.booker import book, BOOKED, DRY_RUN
-from src.watcher import exam_url, matching_exams, is_logged_out, HOME
+from src.booker import book, BookResult, BOOKED, DRY_RUN, TAKEN
+from src.watcher import exam_url, matching_exams, is_logged_out, has_reservation, HOME
 from src.auth import auto_login, session_exists
 from playwright.async_api import async_playwright
 
@@ -195,6 +195,12 @@ async def run_engine(db, notifier: Notifier, storage_state_path: str, stop_event
                     dry = dry_by.get(d.target_id, True)
                     await page.goto(exam_url(d.exam_id), wait_until="domcontentloaded")
                     result = await book(page, d.session, dry)
+                    if result.outcome == TAKEN and not dry:
+                        # The post-click page didn't show known confirmation text;
+                        # the reservation may still have gone through. Check Home.
+                        await page.goto(HOME, wait_until="domcontentloaded")
+                        if has_reservation(await page.content(), d.exam_name):
+                            result = BookResult(BOOKED, "confirmed via Exam reservations on Home")
                     if result.outcome == BOOKED:
                         db.record_booking(d.target_id, d.exam_id, d.exam_name,
                                           d.session.room_clean, d.session.start.isoformat(),

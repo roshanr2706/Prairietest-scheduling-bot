@@ -102,3 +102,23 @@ def test_matching_exams_exclude_skips_matching_rows():
     '''
     out = W.matching_exams(html, re.compile("CPSC 313", re.I), re.compile("rewrite", re.I))
     assert out == [("1", "CPSC 313 (2026W1): Quiz 1")]
+
+_HOME_WITH_RESERVATIONS = """
+<div class="card"><div class="card-header">Exams available for reservations</div>
+  <div class="list-group-item"><a href="/pt/student/exam/111" aria-label="Make a reservation for CPSC 313 (2026W1): CPSC 313 Quiz 1 Viewing">Make a reservation</a>
+  <span>CPSC 313 (2026W1): CPSC 313 Quiz 1 Viewing</span></div></div>
+<div class="card"><div class="card-header">Exam reservations</div>
+  <table><tr><td><a href="/pt/student/reservation/9">CPSC 313 (2026W1): CPSC 313 Quiz 1 Retake</a></td></tr>
+  <tr><td><a href="/pt/student/reservation/10">CPSC 313 (2026W1): CPSC 313 Quiz 3</a></td><td>Fri, Nov 6, 4pm (PDT)</td></tr></table></div>
+"""
+
+def test_has_reservation_true_for_reserved_exam():
+    assert W.has_reservation(_HOME_WITH_RESERVATIONS,
+                             "Make a reservation for CPSC 313 (2026W1): CPSC 313 Quiz 3")
+
+def test_has_reservation_exact_title_only():
+    # 'Quiz 1' must not match the 'Quiz 1 Retake' reservation or the available-list text
+    assert not W.has_reservation(_HOME_WITH_RESERVATIONS,
+                                 "Make a reservation for CPSC 313 (2026W1): CPSC 313 Quiz 1")
+    assert not W.has_reservation(_HOME_WITH_RESERVATIONS,
+                                 "Make a reservation for CPSC 313 (2026W1): CPSC 313 Quiz 1 Viewing")
