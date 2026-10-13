@@ -31,6 +31,7 @@ import asyncio
 import logging
 import os
 import random
+import traceback
 from src.config import AuthConfig
 from src.notifier import Notifier
 from src.booker import book, BOOKED, DRY_RUN
@@ -212,7 +213,9 @@ async def run_engine(db, notifier: Notifier, storage_state_path: str, stop_event
             except Exception as e:  # noqa: BLE001
                 backoff = min((backoff or 1) * 2, 120)
                 log.exception("engine tick error")
-                db.add_event("error", f"tick error: {e}; backoff {backoff}s")
+                tb = traceback.extract_tb(e.__traceback__)
+                where = f" ({os.path.basename(tb[-1].filename)}:{tb[-1].lineno})" if tb else ""
+                db.add_event("error", f"tick error: {type(e).__name__}: {e}{where}; backoff {backoff}s")
                 await asyncio.sleep(backoff)
             await _wait_for_next_cycle(db)
         await browser.close()

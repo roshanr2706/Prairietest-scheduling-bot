@@ -18,6 +18,9 @@ def parse_sessions(html: str) -> list[Session]:
     soup = BeautifulSoup(html, "lxml")
     sessions: list[Session] = []
     for li in soup.select("ul.list-group li.list-group-item"):
+        time_el = li.find("time")
+        if time_el is None or not time_el.get("datetime"):
+            continue  # not a session row (notice / existing reservation / empty state)
         sessions.append(_parse_row(li))
     return sessions
 

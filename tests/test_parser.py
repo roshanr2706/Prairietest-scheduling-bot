@@ -32,3 +32,11 @@ def test_non_reservable_has_no_button_name():
 def test_never_returns_delete_button():
     for s in parse_sessions(HTML):
         assert s.reserve_button_name is None or "Delete" not in s.reserve_button_name
+
+def test_skips_list_items_without_a_session_time():
+    html = HTML.replace(
+        '<li class="list-group-item ">',
+        '<li class="list-group-item">You already have a reservation for this exam.</li>'
+        '<li class="list-group-item ">', 1)
+    assert html != HTML
+    assert len(parse_sessions(html)) == 5
